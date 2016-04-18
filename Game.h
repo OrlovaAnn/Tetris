@@ -3,9 +3,14 @@
 #include <memory>
 #include <vector>
 
+typedef std::vector<std::vector<int>> int_matrix;
+
+enum Direction{ RIGHT, LEFT, DOWN };
+
 class Figure 
 {
 public:
+	Figure(){}
 	Figure(int size);
 	void setIJ(int i, int j, int val)
 	{
@@ -21,6 +26,7 @@ public:
 
 	void rotateRight();
 	void rotateLeft();
+	int getSize() const { return size; }
 
 private:
 	int size;
@@ -36,13 +42,6 @@ private:
 	static std::vector<Figure> figures;
 };
 
-struct Point
-{
-	Point():x(0), y(0){}
-	Point(int x, int y):x(x), y(y){}
-	int x;
-	int y;
-};
 
 class Game
 {
@@ -56,10 +55,12 @@ public:
     unsigned UpdateInterval();
 
 private:
-	void addPointToSnake(Point);
-	void deletePointFromSnake();
-	void setTarget();
-	void moveSnake();
+	void moveFigure(Direction direction);
+	void drawFigure();
+	void drawGameField();
+	void updateGameField();
+	void removeFullRowIfExists();
+	bool canMove(Direction direction);
 
 private:
     virtual void DoDraw();
@@ -90,13 +91,12 @@ private:
     bool          _lose;
     bool          _paused;
 	bool          _win;
-    unsigned      x0;
-    unsigned      y0;
-    unsigned      cell_x, cell_y;
-	unsigned      _eatenTargets;
-	unsigned direction;
-	std::deque<Point> snakeCoords;
-	Point target;
+	unsigned      x0;
+	unsigned      y0;
+	Figure       _figure;
+	unsigned     _x_figure;
+	unsigned     _y_figure;
+	int_matrix   _field;
 };
 
 typedef std::unique_ptr<Game> GamePtr;

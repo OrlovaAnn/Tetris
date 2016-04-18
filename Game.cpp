@@ -54,10 +54,6 @@ void Figure::rotateLeft()
 	}
 }
 
-
-
-
-
 Figures::Figures()
 {
 	// figure "o"
@@ -124,9 +120,19 @@ Game::Game()
 , _lose(false)
 , _paused(false)
 , _win(false)
+, x0(X0)
+, y0(Y0)
+, _x_figure(WIDTH / 2)
+, _y_figure(0)
 {	
 
 	_figure = Figures::getRandomFigure();
+	_field.reserve(WIDTH);
+
+	for (int i = 0; i < HEIGHT; ++i)
+	{
+		_field[i].assign(WIDTH, 0);
+	}
     //static_assert(offsetof(Game,cell_x) > offsetof(Game,x0), "cell_x < x0");
     //static_assert(offsetof(Game,cell_y) > offsetof(Game,y0), "cell_y < y0");
 }
@@ -181,26 +187,75 @@ void Game::Draw()
     GLSwapBuffers();
 }
 
+void Game::drawFigure()
+{
+	for (int i = 0; i < _figure.getSize(); ++i)
+	{
+		for (int j = 0; j < _figure.getSize(); ++j)
+		{
+			if (_figure.getIJ(i, j) == 1)
+			{
+				int x = (j + _x_figure) * CELL_SIZE;
+				int y = (i + _y_figure) * CELL_SIZE;
+				GLDrawRect(x, y, x + CELL_SIZE, y + CELL_SIZE, 0x00ff00ff);
+			}
+		}
+	}
+}
+
+void Game::drawGameField()
+{
+	for (int i = 0; i < HEIGHT; ++i)
+	{
+		for (int j = 0; j < WIDTH; ++j)
+		{
+			if (_field[i][j] == 1)
+			{
+				int x = j * CELL_SIZE;
+				int y = i * CELL_SIZE;
+				GLDrawRect(x, y, x + CELL_SIZE, y + CELL_SIZE, 0x00ff00ff);
+			}
+		}
+	}
+}
+
+void Game::updateGameField()
+{
+	bool fullRaw = true;
+	for (int i = 0; i < _figure.getSize(); ++i)
+	{
+		for (int j = 0; j < _figure.getSize(); ++j)
+		{
+			if (_figure.getIJ(i, j) == 1)
+				_field[i + _y_figure][j + _x_figure] = 1;
+		}
+	}
+}
+
+void Game::removeFullRowIfExists()
+{
+
+}
+
 void Game::DoDraw()
 {
     GLDrawGrid(x0, y0, WIDTH, HEIGHT, CELL_SIZE);
     GLDrawBorder(x0, y0, WIDTH * CELL_SIZE, HEIGHT * CELL_SIZE);
 	if(!_lose && !_win)
 	{
-		moveSnake();
+		moveFigure(Direction::DOWN);
 	}
-	std::deque<Point>::iterator it = snakeCoords.begin();
+	/// draw game field
+	drawGameField();
+	drawFigure();
 
-	GLDrawRect(target.x, target.y, target.x + CELL_SIZE, target.y + CELL_SIZE, 0x00ff0000);
-
-	
-	while (it != snakeCoords.end())
+	if (!canMove(Direction::DOWN))
 	{
-		std::cout << it->x << " " << it->y << std::endl;
-		GLDrawRect(it->x, it->y, it-> x+ CELL_SIZE, it->y + CELL_SIZE, 0x00ff00ff);
-		it++;
+		if (!checkForFullness())
+			_lose = true;
+		_figure = Figures::getRandomFigure();
 	}
-
+	
     _DrawStatus(x0 + (WIDTH + 1) * CELL_SIZE, y0);
 }
 
@@ -247,8 +302,6 @@ void Game::Update()
 		{
 			_win = true;
 			_SpeedUp();
-			//_Pause();
-			//_Restart();
 		}
     }
 
@@ -260,14 +313,7 @@ void Game::_Restart()
     _paused = false;
     _score  = 0;
 	_win = false;
-    cell_x = x0;
-    cell_y = y0;
-	snakeCoords.clear();
-	snakeCoords.push_back(Point(X0 + 2*CELL_SIZE,Y0));
-	snakeCoords.push_back(Point(X0 + CELL_SIZE,Y0));
-	snakeCoords.push_back(Point(X0,Y0));
-	setTarget();
-	direction = 1;
+
 }
 
 void Game::_Pause()
@@ -295,37 +341,58 @@ void Game::_SpeedDown()
     _speed = std::max(_speed - 1, MIN_SPEED);
 }
 
-void Game::addPointToSnake(Point p)
+
+bool Game::canMove(Direction direction)
 {
-	 snakeCoords.push_front(p);
-}
+	int fig_size = _figure.getSize(); 
 
-void Game::deletePointFromSnake()
-{
-	snakeCoords.pop_back();
-}
-
-
-void Game::moveSnake()
-{	
 	switch (direction)
-    {
-			case 0 : cell_y += CELL_SIZE; break;
-            case 2 : cell_y -= CELL_SIZE; break;
-            case 3 : cell_x -= CELL_SIZE; break;
-            case 1 : cell_x += CELL_SIZE; break;
-    }
-
-	Update();
-	addPointToSnake(Point(cell_x, cell_y));
-	if(cell_x == target.x && cell_y == target.y)
 	{
-		_score += 10*_speed;
-		++_eatenTargets;
-		setTarget();
+	case LEFT:
+		for (int i = 0; i < fig_size; ++i)
+		{
+			for (int j = 0; j < fig_size; ++j)
+			{
+				if (_figure.getIJ(i,j) * (_x_figure + j - 1) < 0)
+					return false;
+			}
+		}
+		break;
+	case RIGHT:
+		for (int i = 0; i < fig_size; ++i)
+		{
+			for (int j = 0; j < fig_size; ++j)
+			{
+				if (_figure.getIJ(i, j) * (_x_figure + j + 1) > WIDTH)
+					return false;
+			}
+		}
+		break;
+	case DOWN:
+		for (int i = 0; i < fig_size; ++i)
+		{
+			for (int j = 0; j < fig_size; ++j)
+			{
+				if (_field[i + _y_figure][j + _x_figure] * _figure.getIJ(i, j) == 1)
+					return false;
+			}
+		}
+		break;
 	}
-	else
-	{
-		deletePointFromSnake();
-	}
+	return true;
 }
+
+void Game::moveFigure(Direction direction)
+{
+	if ( direction == Direction::DOWN && canMove(Direction::DOWN))
+		++_y_figure;
+
+	if (direction == Direction::RIGHT && canMove(Direction::RIGHT))
+		++_x_figure;
+
+	if (direction == Direction::LEFT && canMove(Direction::LEFT))
+		--_x_figure;
+}
+
+
+
