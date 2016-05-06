@@ -25,7 +25,7 @@ private:
     static void _ResizeHandler(int width, int height);
     static void _UpdateHandler(int value);
     static void _RedrawHandler(int value);
-	static void _RedrawSnake(int value);
+	static void _RedrawTetris(int value);
 
 private:
     void        _BindHandlers();

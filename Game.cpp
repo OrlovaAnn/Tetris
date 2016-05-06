@@ -10,9 +10,9 @@ const unsigned char ESC   = 27;
 const unsigned char SPACE = 32;
 
 const unsigned MIN_SPEED  = 1;
-const unsigned MAX_SPEED  = 9;
+const unsigned MAX_SPEED  = 90;
 
-const unsigned WIN_NUNBER = 6;
+const unsigned WIN_NUNBER = 10;
 
 const unsigned CELL_SIZE  = 25;
 const unsigned WIDTH      = 10;
@@ -21,11 +21,13 @@ const unsigned HEIGHT     = 20;
 const unsigned X0          = 50;
 const unsigned Y0          = 50;
 
+const int X_BEGIN = 3;
 
+std::vector<Figure> Figures::figures;
 
-Figure::Figure(int size)
+Figure::Figure(int size) : size(size)
 {
-	field.reserve(size);
+	field.resize(size);
 	for (int i = 0; i < size; ++i)
 	{
 		field[i].assign(size, 0);
@@ -34,27 +36,43 @@ Figure::Figure(int size)
 
 void Figure::rotateRight()
 {
-	for (int i = 0; i < size; ++i)
+	for (int r = 0; r < size; r++) 
 	{
-		for (int j = 0; j < i; ++j)
+		for (int c = r; c < size; c++) 
 		{
-			std::swap(field[i][j], field[size - j - 1][i]);
+			std::swap(field[r][c], field[c][r]);
+		}
+	}
+	//reverse elements on row order
+	for (int r = 0; r < size; r++) 
+	{
+		for (int c = 0; c < size / 2; c++) 
+		{
+			std::swap(field[r][c], field[r][size - c - 1]);
 		}
 	}
 }
 
 void Figure::rotateLeft()
 {
-	for (int i = 0; i < size; ++i)
+	for (int r = 0; r < size; r++)
 	{
-		for (int j = 0; j < i; ++j)
+		for (int c = r; c < size; c++)
 		{
-			std::swap(field[i][j], field[j][size - i - 1]);
+			std::swap(field[r][c], field[c][r]);
+		}
+	}
+	//reverse elements on column order
+	for (int c = 0; c < size; c++)
+	{
+		for (int r = 0; r < size / 2; r++)
+		{
+			std::swap(field[r][c], field[size - r - 1][c]);
 		}
 	}
 }
 
-Figures::Figures()
+void Figures::createFigures()
 {
 	// figure "o"
 	Figure o(2);
@@ -62,27 +80,27 @@ Figures::Figures()
 
 	// figure "t"
 	Figure t(3);
-	t.setIJ(1, 1, 1); t.setIJ(2, 0, 1); t.setIJ(2, 1, 1); t.setIJ(2, 2, 1);
+	t.setIJ(1, 1, 1); t.setIJ(0, 0, 1); t.setIJ(0, 1, 1); t.setIJ(0, 2, 1);
 
 	// figure "l"
 	Figure l(3);
-	l.setIJ(1, 0, 1); l.setIJ(2, 0, 1); l.setIJ(2, 1, 1); l.setIJ(2, 2, 1);
+	l.setIJ(1, 0, 1); l.setIJ(0, 0, 1); l.setIJ(0, 1, 1); l.setIJ(0, 2, 1);
 
 	// figure "j"
 	Figure j(3);
-	j.setIJ(1, 2, 1); j.setIJ(2, 0, 1); j.setIJ(2, 1, 1); j.setIJ(2, 2, 1);
+	j.setIJ(1, 2, 1); j.setIJ(0, 0, 1); j.setIJ(0, 1, 1); j.setIJ(0, 2, 1);
 
 	// figure "s"
 	Figure s(3);
-	s.setIJ(1, 1, 1);	s.setIJ(1, 2, 1);	s.setIJ(2, 0, 1);	s.setIJ(2, 1, 1);
+	s.setIJ(1, 1, 1);	s.setIJ(1, 2, 1);	s.setIJ(0, 0, 1);	s.setIJ(0, 1, 1);
 
 	// figure "z"
 	Figure z(3);
-	z.setIJ(1, 0, 1);	z.setIJ(1, 1, 1);	z.setIJ(2, 1, 1);	z.setIJ(2, 2, 1);
+	z.setIJ(1, 0, 1);	z.setIJ(1, 1, 1);	z.setIJ(0, 1, 1);	z.setIJ(0, 2, 1);
 
 	// figure "i"
 	Figure i(4);
-	i.setIJ(3, 0, 1);	i.setIJ(3, 1, 1);	i.setIJ(3, 2, 1);	i.setIJ(3, 3, 1);
+	i.setIJ(0, 0, 1);	i.setIJ(0, 1, 1);	i.setIJ(0, 2, 1);	i.setIJ(0, 3, 1);
 
 	figures.push_back(o);
 	figures.push_back(t);
@@ -97,10 +115,8 @@ Figures::Figures()
 
 Figure Figures::getRandomFigure()
 {
-	return figures[std::rand() % 8];
+	return figures[std::rand() % 7];
 }
-
-
 
 void Game::print(int value)
 {
@@ -122,12 +138,13 @@ Game::Game()
 , _win(false)
 , x0(X0)
 , y0(Y0)
-, _x_figure(WIDTH / 2)
-, _y_figure(0)
+, _x_figure(X_BEGIN)
 {	
-
+	Figures::createFigures();
 	_figure = Figures::getRandomFigure();
-	_field.reserve(WIDTH);
+	_y_figure = HEIGHT;
+
+	_field.resize(HEIGHT);
 
 	for (int i = 0; i < HEIGHT; ++i)
 	{
@@ -164,13 +181,16 @@ void Game::_InGameKey(int specialKey, unsigned char key)
 {
     if (!_paused && !_lose)
     {
-		unsigned oldDir;
         switch (specialKey)
         {
-			case GLUT_KEY_UP    : _figure.rotateRight(); break;
-			case GLUT_KEY_DOWN  : _speed == MAX_SPEED; break;
-            case GLUT_KEY_LEFT  : _figure.rotateLeft(); break;
-			case GLUT_KEY_RIGHT : _figure.rotateRight(); break;
+			case GLUT_KEY_UP:   
+				_figure.rotateLeft();
+				//if (!canMove(Direction::LEFT) || !canMove(Direction::RIGHT) || !canMove(Direction::DOWN))
+				//	_figure.rotateLeft(); 
+				break;
+			case GLUT_KEY_DOWN  : _speed = MAX_SPEED; break;
+			case GLUT_KEY_LEFT  : moveFigure(Direction::LEFT); break;
+			case GLUT_KEY_RIGHT : moveFigure(Direction::RIGHT); break;
         }
 
         switch (key)
@@ -195,8 +215,10 @@ void Game::drawFigure()
 		{
 			if (_figure.getIJ(i, j) == 1)
 			{
-				int x = (j + _x_figure) * CELL_SIZE;
-				int y = (i + _y_figure) * CELL_SIZE;
+				int x = (j + _x_figure) * CELL_SIZE + x0;
+				int y = (i + _y_figure) * CELL_SIZE + y0;
+				if (y < 0)
+					continue;
 				GLDrawRect(x, y, x + CELL_SIZE, y + CELL_SIZE, 0x00ff00ff);
 			}
 		}
@@ -211,9 +233,9 @@ void Game::drawGameField()
 		{
 			if (_field[i][j] == 1)
 			{
-				int x = j * CELL_SIZE;
-				int y = i * CELL_SIZE;
-				GLDrawRect(x, y, x + CELL_SIZE, y + CELL_SIZE, 0x00ff00ff);
+				int x = j * CELL_SIZE + x0;
+				int y = i * CELL_SIZE + y0; 
+				GLDrawRect(x, y, x + CELL_SIZE, y + CELL_SIZE, 0x0000aaff);
 			}
 		}
 	}
@@ -221,7 +243,6 @@ void Game::drawGameField()
 
 void Game::updateGameField()
 {
-	bool fullRaw = true;
 	for (int i = 0; i < _figure.getSize(); ++i)
 	{
 		for (int j = 0; j < _figure.getSize(); ++j)
@@ -230,18 +251,35 @@ void Game::updateGameField()
 				_field[i + _y_figure][j + _x_figure] = 1;
 		}
 	}
+	removeFullRowsIfExists();
 }
 
-void Game::removeFullRowIfExists()
+auto isFullRow = [](const std::vector<int>& row)
 {
+	bool fullRaw = true;
+	for (auto elem : row)
+	{
+		if (elem == 0)
+			fullRaw = false;
+	}
+	return fullRaw;
+};
 
+void Game::removeFullRowsIfExists()
+{
+	_field.erase(std::remove_if(_field.begin(), _field.end(), isFullRow), _field.end());
+
+	int deleted_rows_number = HEIGHT - _field.size();
+
+	_field.insert(_field.end(), deleted_rows_number, std::vector<int>(WIDTH, 0));
+	_score += deleted_rows_number;
 }
 
 void Game::DoDraw()
 {
     GLDrawGrid(x0, y0, WIDTH, HEIGHT, CELL_SIZE);
     GLDrawBorder(x0, y0, WIDTH * CELL_SIZE, HEIGHT * CELL_SIZE);
-	if(!_lose && !_win)
+	if (!_lose && !_win)
 	{
 		moveFigure(Direction::DOWN);
 	}
@@ -249,13 +287,6 @@ void Game::DoDraw()
 	drawGameField();
 	drawFigure();
 
-	if (!canMove(Direction::DOWN))
-	{
-		if (!checkForFullness())
-			_lose = true;
-		_figure = Figures::getRandomFigure();
-	}
-	
     _DrawStatus(x0 + (WIDTH + 1) * CELL_SIZE, y0);
 }
 
@@ -281,30 +312,34 @@ void Game::_DrawStatus(unsigned x0, unsigned y0)
     }
 }
 
+void Game::moveFigureToTop()
+{
+	_x_figure = X_BEGIN;
+	_y_figure = HEIGHT;
+}
+
 void Game::Update()
 {
     if (!_paused)
     {
-        if (cell_x < x0 || cell_x >= x0 + WIDTH * CELL_SIZE ||
-            cell_y < y0 || cell_y >= y0 + HEIGHT * CELL_SIZE)
+		if (_y_figure == HEIGHT && !canMove(Direction::DOWN))
         {
             _lose = true;
         }
 
-		std::deque<Point>::iterator j = snakeCoords.begin();
-		for(std::deque<Point>::iterator i = snakeCoords.begin() + 1; i != snakeCoords.end() - 1; ++i)
+		if (!canMove(Direction::DOWN))
 		{
-			if( i->x == j->x && i->y == j->y)
-				_lose = true;
+			updateGameField();
+			_figure = Figures::getRandomFigure();
+			moveFigureToTop();
 		}
 
-		if(_eatenTargets == WIN_NUNBER)
+		if(_score == WIN_NUNBER)
 		{
 			_win = true;
 			_SpeedUp();
 		}
     }
-
 }
 
 void Game::_Restart()
@@ -341,6 +376,10 @@ void Game::_SpeedDown()
     _speed = std::max(_speed - 1, MIN_SPEED);
 }
 
+bool Game::isOutOfBoundary(int i, int j)
+{
+	return true;
+}
 
 bool Game::canMove(Direction direction)
 {
@@ -353,27 +392,54 @@ bool Game::canMove(Direction direction)
 		{
 			for (int j = 0; j < fig_size; ++j)
 			{
-				if (_figure.getIJ(i,j) * (_x_figure + j - 1) < 0)
+				if (_figure.getIJ(j, i) * (_x_figure + i - 1) < 0)
+					return false;					
+			}
+			for (int j = 0; j < fig_size; ++j)
+			{
+				if ((j + _x_figure < 0) || (j + _x_figure > WIDTH - 1) || (i + _y_figure > HEIGHT - 1))
+					continue;
+
+				if (_field[i + _y_figure][j + _x_figure] * _figure.getIJ(i, j) == 1) 
 					return false;
 			}
 		}
 		break;
+
 	case RIGHT:
 		for (int i = 0; i < fig_size; ++i)
 		{
 			for (int j = 0; j < fig_size; ++j)
 			{
-				if (_figure.getIJ(i, j) * (_x_figure + j + 1) > WIDTH)
+				if (_figure.getIJ(j, i) * (_x_figure + i + 1) > WIDTH -1 )
+					return false;
+			}
+			for (int j = 0; j < fig_size; ++j)
+			{
+				if ((j + _x_figure < 0) || (j + _x_figure > WIDTH - 1) || (i + _y_figure > HEIGHT - 1))
+					continue;
+
+				if (_field[i + _y_figure][j + _x_figure] * _figure.getIJ(i, j) == 1)
 					return false;
 			}
 		}
 		break;
+
 	case DOWN:
 		for (int i = 0; i < fig_size; ++i)
 		{
 			for (int j = 0; j < fig_size; ++j)
 			{
-				if (_field[i + _y_figure][j + _x_figure] * _figure.getIJ(i, j) == 1)
+				if (_figure.getIJ(i, j) * (_y_figure + i - 1) < 0)
+					return false;
+			}
+
+			for (int j = 0; j < fig_size; ++j)
+			{
+				if ((i + _y_figure + 1 > HEIGHT - 1) || (j + _x_figure < 0) || (j + _x_figure + 1 > WIDTH - 1) || (i + _y_figure - 1 < 0))
+					continue;
+
+				if (_field[i + _y_figure - 1][j + _x_figure] * _figure.getIJ(i, j) == 1)
 					return false;
 			}
 		}
@@ -385,7 +451,7 @@ bool Game::canMove(Direction direction)
 void Game::moveFigure(Direction direction)
 {
 	if ( direction == Direction::DOWN && canMove(Direction::DOWN))
-		++_y_figure;
+		--_y_figure;
 
 	if (direction == Direction::RIGHT && canMove(Direction::RIGHT))
 		++_x_figure;

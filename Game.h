@@ -37,7 +37,8 @@ class Figures
 {
 public:
 	static Figure getRandomFigure();
-	Figures();
+	static void createFigures();
+	Figures(){}
 private:
 	static std::vector<Figure> figures;
 };
@@ -59,8 +60,10 @@ private:
 	void drawFigure();
 	void drawGameField();
 	void updateGameField();
-	void removeFullRowIfExists();
+	void removeFullRowsIfExists();
+	void moveFigureToTop();
 	bool canMove(Direction direction);
+	bool isOutOfBoundary(int i, int j);
 
 private:
     virtual void DoDraw();
@@ -93,10 +96,10 @@ private:
 	bool          _win;
 	unsigned      x0;
 	unsigned      y0;
-	Figure       _figure;
-	unsigned     _x_figure;
-	unsigned     _y_figure;
-	int_matrix   _field;
+	Figure        _figure;
+	int           _x_figure;
+	int           _y_figure;
+	int_matrix    _field;
 };
 
 typedef std::unique_ptr<Game> GamePtr;
